@@ -1,0 +1,88 @@
+<%- include('header') -%>
+
+<script src="http://www.youtube.com/player_api"></script>
+<script>
+
+// create youtube player
+var player;
+window.data = [];
+
+function onYouTubePlayerAPIReady(video) {
+	player = new YT.Player('player', {
+		height: '390',
+		width: '640',
+		events: {
+			'onReady': onPlayerReady,
+			'onStateChange': onPlayerStateChange
+		}
+	});
+}
+
+// autoplay video
+function onPlayerReady(event) {
+	if (player.getVideoData().video_id !== '') {
+		event.target.playVideo();
+	}
+	window.socket.emit('query');
+}
+
+// when video ends
+function onPlayerStateChange(event) {
+	//console.log(event);
+	if (event.data === 0) {
+		window.socket.emit('delete');
+
+		$("#playlist div:first").remove();
+
+		if (window.data.length > 0) {
+			var id = window.data.shift();
+			console.log(id);
+			player.loadVideoById(id);
+		}
+	}
+}
+
+function parseAddress(address) {
+	var arr = address.split('=');
+	if (arr.length > 1) {
+		return arr[1].split('&')[0];
+	} else {
+		return arr[0].split('&')[0];
+	}
+}
+
+function send() {
+	var id = document.getElementById("idVideo").value;
+
+	if (player.getCurrentTime() === player.getDuration()
+				&& window.data.length === 0) {
+		player.loadVideoById(parseAddress(id));
+		console.log(window.socket);
+	} else {
+		window.data.push(parseAddress(id));
+	}
+}
+
+function nextSong() {
+	if(window.data.length > 0){
+		player.loadVideoById(window.data.shift());
+		window.socket.emit('delete');
+		$("#playlist div:first").remove();
+	}
+}
+
+</script>
+<body>
+	<div class="container mt-5">
+		<div class="row">
+			<div class="col-md-8">
+				<div id="player"></div><br>
+				<button id="next" class="btn btn-primary" onclick="nextSong()">Siguiente</button>
+			</div>
+			<div class="col-md-4" style="padding-left: 0px;">
+				<div id="playlist"></div>
+			</div>
+		</div>
+	</div>
+</body>
+<%- include('footer') -%>
